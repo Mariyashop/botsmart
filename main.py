@@ -14,18 +14,17 @@ openai.api_key = OPENAI_API_KEY
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_message = update.message.text.strip()
 
-    if user_message.lower().startswith("سوال دارم"):
-        question = user_message[len("سوال دارم"):].strip()
+    if user_message.lower().startswith("نینی بات"):
+        question = user_message[len("نینی بات"):].strip()
 
         if not question:
             await update.message.reply_text("سوالت رو بعد از «سوال دارم» بنویس دیگه!", reply_to_message_id=update.message.message_id)
             return
 
-        # ارسال پیام طنز - ریپلای به پیام کاربر
         await update.message.reply_text(
-            "والا منو امون بزرگ ساخت، خودمم نمی‌دونم چرا به وجود اومدم، بی‌گناهم!\nاگه کاری داشتی، فقط بنویس «سوال دارم» بعدش سوالتو بپرس.",
+            "🥺 من نینی هستم... لطفاً منو اذیت نکنید! 👶🍼 منو آمون بزرگ خلق کرده، ناناحتم... سوالتو بپرس ببینم 😢",
             reply_to_message_id=update.message.message_id
-        )
+    )
 
         try:
             response = openai.ChatCompletion.create(
