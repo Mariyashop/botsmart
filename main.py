@@ -5,8 +5,8 @@ import openai
 import os
 
 # تنظیم توکن‌ها
-TELEGRAM_TOKEN = "7092573468:AAEP1YTLNKsWsSm7oERQbP8OA3pr4O1zBcQ"
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # حتماً تو Railway ست کن
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 openai.api_key = OPENAI_API_KEY
 
@@ -18,11 +18,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         question = user_message[len("سوال دارم"):].strip()
 
         if not question:
-            await update.message.reply_text("سوالت رو بعد از «سوال دارم» بنویس دیگه!")
+            await update.message.reply_text("سوالت رو بعد از «سوال دارم» بنویس دیگه!", reply_to_message_id=update.message.message_id)
             return
 
-        # پیام اولیه طنز
-        await update.message.reply_text("والا منو امون بزرگ خلق کرد، خودمم نمی‌دونم چرا درست شدم بی‌تقصیرم!\nسوالتو بپرس:")
+        # ارسال پیام طنز - ریپلای به پیام کاربر
+        await update.message.reply_text(
+            "والا منو امون بزرگ ساخت، خودمم نمی‌دونم چرا به وجود اومدم، بی‌گناهم!\nاگه کاری داشتی، فقط بنویس «سوال دارم» بعدش سوالتو بپرس.",
+            reply_to_message_id=update.message.message_id
+        )
 
         try:
             response = openai.ChatCompletion.create(
@@ -35,7 +38,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception as e:
             answer = f"مشکلی پیش اومد: {e}"
 
-        await update.message.reply_text(answer)
+        # پاسخ به سوال - ریپلای به پیام کاربر
+        await update.message.reply_text(answer, reply_to_message_id=update.message.message_id)
 
 # اجرای ربات
 if __name__ == "__main__":
