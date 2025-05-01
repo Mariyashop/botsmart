@@ -1,58 +1,45 @@
 import logging
-import os
-import torch
 from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
+import openai
+import os
 
-# بارگیری مدل DistilBERT (مدل سبک و کم حجم)
-tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased")
-model = AutoModelForSequenceClassification.from_pretrained("distilbert-base-uncased")
-model.eval()
-if torch.cuda.is_available():
-    model.to("cuda")
+# تنظیم توکن‌ها
+TELEGRAM_TOKEN = "7092573468:AAEP1YTLNKsWsSm7oERQbP8OA3pr4O1zBcQ"
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # حتماً تو Railway ست کن
 
-# گرفتن توکن از محیط
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-PORT = int(os.getenv("PORT", 8080))  # تنظیم پورت از محیط، پیش‌فرض پورت 8080
-
-# تولید پاسخ
-def generate_response(prompt):
-    inputs = tokenizer(prompt, return_tensors="pt")
-    input_ids = inputs.input_ids.to(model.device)
-    with torch.no_grad():
-        outputs = model(input_ids)
-    # نتیجه‌گیری مدل می‌تواند برای پاسخ‌ها استفاده شود
-    response = tokenizer.decode(outputs.logits.argmax(dim=-1), skip_special_tokens=True)
-    return response
+openai.api_key = OPENAI_API_KEY
 
 # پاسخ به پیام‌ها
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_message = update.message.text.strip()
 
-    # پیام شخصیت‌دار نینی بات
-    await update.message.reply_text(
-        "🥺 من نینی هستم... لطفاً منو اذیت نکنید! 👶🍼 منو آمون بزرگ خلق کرده، ناناحتم... سوالتو بپرس ببینم 😢",
-        reply_to_message_id=update.message.message_id
-    )
+    if user_message.lower().startswith("سوال دارم"):
+        question = user_message[len("سوال دارم"):].strip()
 
-    # حالا هر پیامی که ارسال بشه (سوالات مختلف) بهش پاسخ می‌ده
-    question = user_message
-    try:
-        response = generate_response(question)  # جواب به سوال کاربر
-    except Exception as e:
-        response = f"مشکلی پیش اومد: {e}"
+        if not question:
+            await update.message.reply_text("سوالت رو بعد از «سوال دارم» بنویس دیگه!")
+            return
 
-    # ریپلای به پیام اصلی کاربر
-    await update.message.reply_text(response, reply_to_message_id=update.message.message_id)
+        # پیام اولیه طنز
+        await update.message.reply_text("والا منو امون بزرگ خلق کرد، خودمم نمی‌دونم چرا درست شدم بی‌تقصیرم!\nسوالتو بپرس:")
 
-# راه‌اندازی ربات
+        try:
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=[{"role": "user", "content": question}],
+                max_tokens=1000,
+                temperature=0.7
+            )
+            answer = response.choices[0].message.content.strip()
+        except Exception as e:
+            answer = f"مشکلی پیش اومد: {e}"
+
+        await update.message.reply_text(answer)
+
+# اجرای ربات
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
-
-    # فیلتر به گونه‌ای تنظیم شده که به همه پیام‌ها جواب می‌ده
-    app.add_handler(MessageHandler(filters.TEXT, handle_message))
-    
-    # سرویس رو روی پورت مشخص شده اجرا کن
-    app.run_polling(port=PORT)  # پورت رو در اینجا مشخص کردیم
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    app.run_polling()
